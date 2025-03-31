@@ -1,136 +1,95 @@
-from vpython import *
 import math
+import numpy as np
 
-g = 9.8
-L = 1.0
+m = 1
+M = 5
+r = 1
 n = 5
-dt = 0.01
-M = 30.0
-m = 1.0
-k = g / L
-gamma = 0.1  # damping
-kick = 0.01
+g = 9.8
+fps = 100
+dt = 1 / fps
 
-# Set initial phases and convert to x, v
-A = 0.3
-omega = math.sqrt(k / m)
-offset = 1.3
-phases = [0, 0, 0, 0, offset]  # or use any offset you want, must be len = n
+class Data:
+    def __init__(self, x: np.ndarray, X: float):
+        self.x = x
+        self.X = X
 
-x = [A * math.cos(phi) for phi in phases]
-x_prev = x[:]
-v = [-A * omega * math.sin(phi) for phi in phases]
+    def __add__(self, other: 'Data'):
+        return Data(self.x + other.x, self.X + other.X)
 
-X = 0.0
-V = 0.0
+    def __rmul__(self, other: float):
+        return Data(other * self.x, other * self.X)
 
-# Cancel net momentum
-s = sum(v)
-for i in range(n):
-    v[i] -= s / n
+    def __str__(self):
+        return f"{self.x}, {self.X}"
 
-base = box(pos=vector(0, 0, 0), size=vector(3, 0.05, 0.5))
+def acceleration(x: Data, v: Data) -> Data:
+    dividend = m * r * sum(math.sin(x.x[i]) * v.x[i] ** 2 for i in range(n)) \
+            + m * g * r * sum(math.sin(x.x[i]) * math.cos(x.x[i]) for i in range(n))
 
-deltas = [-1.2 + 2.4 * i / (n - 1) for i in range(n)]
-pivots = []
+    divisor = (n * m + M) - m * sum(math.cos(x.x[i]) ** 2 for i in range(n))
 
-for i in range(n):
-    pivots.append(cylinder(pos=vector(deltas[i], 0, 0),
-                           axis=vector(L * math.sin(x[i] / L), -L * math.cos(x[i] / L), 0),
-                           radius=0.02))
+    A = dividend / divisor
 
-# Graph setup
-energy_graph = graph(title="Total Energy vs Time", xtitle="Time (s)", ytitle="Energy (J)")
-energy_curve = gcurve(color=color.green)
+    a = np.fromiter((-g * math.sin(x.x[i]) - math.cos(x.x[i]) * A / r for i in range(n)), float, n)
 
-# Displacement (x) graph setup
-x_graph = graph(title="x[i] vs Time", xtitle="Time (s)", ytitle="x (displacement)", fast=False, scroll=True, xmin=-5, xmax=0)
-x_curves = [gcurve(color=color.hsv_to_rgb(vector(i/n, 1, 1))) for i in range(n)]
-x_graph = graph(title="X vs Time", xtitle="Time (s)", ytitle="X (displacement)", fast=False)
-X_curve = gcurve()
+    return Data(a, A)
 
-t = 0
+def energy(x: Data, v: Data) -> float:
+    result = 0
+    for i in range(n):
+        result += 0.5 * m * (vector(v.X, 0, 0) + vector(r * v.x[i], 0, 0).rotate(x.x[i])).mag2
 
-# Van der Pol acceleration
-def acceleration(xi, vi, X, V):
-  mu = 1.0  # nonlinear damping strength
-  return -k * (xi - X) / m - gamma * vi
+    result += 0.5 * M * v.X ** 2
 
-def base_acceleration(x_list, X, V):
-    force_sum = sum(k * (xi - X) for xi in x_list)
-    return force_sum / M - gamma * V
+    for i in range(n):
+        result += -m * g * r * math.cos(x.x[i])
+
+    return result
+
+def runge_kutta(x1: Data, v1: Data):
+    a1 = acceleration(x1, v1)
+    x2 = x1 + 0.5 * dt * v1
+    v2 = v1 + 0.5 * dt * a1
+
+    a2 = acceleration(x2, v2)
+
+    x3 = x1 + 0.5 * dt * v2
+    v3 = v1 + 0.5 * dt * a2
+
+    a3 = acceleration(x3, v3)
+
+    x4 = x1 + dt * v3
+    v4 = v1 + dt * a3
+
+    a4 = acceleration(x4, v4)
+
+    return x1 + dt / 6 * (v1 + 2 * v2 + 2 * v3 + v4),\
+           v1 + dt / 6 * (a1 + 2 * a2 + 2 * a3 + a4)
+
+from vpython import *
+
+x = Data(np.array([0, 0, 0, 0, 1]), 0)
+v = Data(np.array([0, 0, 0, 0, 0]), 0)
+
+deltas = np.linspace(-2, 2, n)
+
+rods = [cylinder(pos=vector(deltas[i], 0, 0),
+                 axis = vector(r * math.sin(x.x[i]), -r * math.cos(x.x[i]), 0),
+                 radius = 0.02)
+                 for i in range(n)]
+
+ceiling = box(pos=vector(0, 0, 0), size = vector(5, 0.1, 0.5))
 
 while True:
-    rate(1 / dt)
-    t += dt
+    rate(fps)
 
-    # RK4 for each x[i] and v[i]
-    x1 = x[:]
-    v1 = v[:]
-    X1 = X
-    V1 = V
-
-    a1 = [acceleration(x1[i], v1[i], X1, V1) for i in range(n)]
-    A1 = base_acceleration(x1, X1, V1)
-
-    x2 = [x1[i] + 0.5 * dt * v1[i] for i in range(n)]
-    v2 = [v1[i] + 0.5 * dt * a1[i] for i in range(n)]
-    X2 = X1 + 0.5 * dt * V1
-    V2 = V1 + 0.5 * dt * A1
-
-    a2 = [acceleration(x2[i], v2[i], X2, V2) for i in range(n)]
-    A2 = base_acceleration(x2, X2, V2)
-
-    x3 = [x1[i] + 0.5 * dt * v2[i] for i in range(n)]
-    v3 = [v1[i] + 0.5 * dt * a2[i] for i in range(n)]
-    X3 = X1 + 0.5 * dt * V2
-    V3 = V1 + 0.5 * dt * A2
-
-    a3 = [acceleration(x3[i], v3[i], X3, V3) for i in range(n)]
-    A3 = base_acceleration(x3, X3, V3)
-
-    x4 = [x1[i] + dt * v3[i] for i in range(n)]
-    v4 = [v1[i] + dt * a3[i] for i in range(n)]
-    X4 = X1 + dt * V3
-    V4 = V1 + dt * A3
-
-    a4 = [acceleration(x4[i], v4[i], X4, V4) for i in range(n)]
-    A4 = base_acceleration(x4, X4, V4)
+    x, v = runge_kutta(x, v)
 
     for i in range(n):
-        x[i] += dt / 6 * (v1[i] + 2*v2[i] + 2*v3[i] + v4[i])
-        v[i] += dt / 6 * (a1[i] + 2*a2[i] + 2*a3[i] + a4[i])
+        rods[i].pos.x = deltas[i] + x.X
+        rods[i].axis = vector(r * math.sin(x.x[i]), - r * math.cos(x.x[i]), 0)
 
-    X += dt / 6 * (V1 + 2*V2 + 2*V3 + V4)
-    V += dt / 6 * (A1 + 2*A2 + 2*A3 + A4)
+    ceiling.pos.x = x.X
 
-    base.pos = vector(X, 0, 0)
-
-    for i in range(n):
-        if x_prev[i] * x[i] < 0:  # crossed zero
-            if v[i] > 0:
-                v[i] += kick / m
-                V -= kick / M
-            else:
-                v[i] -= kick / m
-                V += kick / M
-
-    x_prev = x[:]
-
-    for i in range(n):
-        pivots[i].pos.x = deltas[i] + X
-        pivots[i].axis = vector(L * math.sin((x[i] - X) / L), -L * math.cos((x[i] - X) / L), 0)
-
-    # Energy calculation
-    total_energy = 0.5 * M * V**2
-    for i in range(n):
-        ke = 0.5 * m * v[i]**2
-        pe = 0.5 * k * (x[i] - X)**2
-        total_energy += ke + pe
-
-    # Plot x[i] vs time
-    for i in range(n):
-        x_curves[i].plot(t, x[i])
-
-    energy_curve.plot(t, total_energy)
-    X_curve.plot(t, X)
+    print(energy(x, v))
