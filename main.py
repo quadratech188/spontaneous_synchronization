@@ -109,13 +109,13 @@ while True:
     def angle_threshold_callback(evt):
         global angle_threshold
         angle_threshold = evt.number
-    scene.append_to_caption('\nangle_threshold\n')
+    scene.append_to_caption('\nAngle Threshold\n')
     winput(bind=angle_threshold_callback, text=str(angle_threshold))
 
     def impulse_callback(evt):
         global impulse
         impulse = evt.number
-    scene.append_to_caption('\nimpulse\n')
+    scene.append_to_caption('\nImpulse\n')
     winput(bind=impulse_callback, text=str(impulse))
 
     stop = False
