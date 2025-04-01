@@ -2,11 +2,15 @@ import math
 import numpy as np
 
 m = 1
-M = 100
+M = 10
 r = 1
 b = 0.1
 n = 5
+
+angle_threshold = 0.1
 impulse = 0.1
+initial_amplitude = 1
+
 g = 9.8
 fps = 100
 timescale = 1
@@ -76,9 +80,10 @@ def runge_kutta(x1: Data, v1: Data, f: np.ndarray):
 
 from vpython import *
 
-x = Data(np.array([0.4, 0.5, -0.3, 0.5, -0.5]), 0)
+x = Data(np.zeros(n), 0)
 v = Data(np.zeros(n), 0)
 forces = np.zeros(n)
+t = 0
 
 deltas = np.linspace(-2, 2, n)
 
@@ -93,13 +98,34 @@ angle_graph = graph(title='x - t', xtitle='t(s)', ytitle='x(m)', xmin=-5, xmax=0
 
 angle_curves = [gcurve(color=color.hsv_to_rgb(vector(i / n, 1, 1))) for i in range(n)]
 
+scene.caption = 'Spontaneous Synchronization\n\n'
+timescale_text = wtext(text=f'Time Factor: {timescale}x\n')
+
 def timescale_slider_callback(evt):
-    global timescale
+    global timescale, timescale_text
     timescale = int(evt.value)
+    timescale_text.text = f'Time Factor: {timescale}x\n'
 
-timescale_slider = slider(bind=timescale_slider_callback, min=1, max=10)
+timescale_slider = slider(bind=timescale_slider_callback, min=1, max=10, step=1)
+scene.append_to_caption('\n\n')
 
-t = 0
+def left_callback(evt):
+    x.x[evt.id] = -initial_amplitude
+
+def right_callback(evt):
+    x.x[evt.id] = initial_amplitude
+
+for i in range(n):
+    button(text='<', bind=left_callback, id=i)
+    scene.append_to_caption(f' {i} ')
+    button(text='>', bind=right_callback, id=i)
+    scene.append_to_caption(f'    ')
+
+scene.append_to_caption('\n')
+
+new_n = None
+new_m = None
+new_M = None
 
 while True:
     rate(fps)
@@ -110,11 +136,11 @@ while True:
         forces = np.zeros(n)
 
         for i in range(n):
-            if x_next.x[i] * x.x[i] < 0:
-                if (x_next.x[i] > x.x[i]):
-                    forces[i] = impulse / dt
-                else:
-                    forces[i] = - impulse / dt
+            if x.x[i] < -angle_threshold and x_next.x[i] > -angle_threshold:
+                forces[i] = impulse / dt
+
+            if x.x[i] > angle_threshold and x_next.x[i] < angle_threshold:
+                forces[i] = -impulse / dt
 
         x, v = x_next, v_next
 
