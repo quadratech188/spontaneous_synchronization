@@ -34,7 +34,7 @@ while True:
 
     visualizer = Visualizer(simulation)
 
-    angle_graph = graph(title='x - t', xtitle='t(s)', ytitle='x(m)', xmin=-5, xmax=0, scroll=True)
+    angle_graph = graph(title='x - t', xtitle='t(s)', ytitle='x(rad)', xmin=-5, xmax=0, scroll=True)
 
     angle_curves = [gcurve(color=color.hsv_to_rgb(vector(i / n, 1, 1))) for i in range(n)]
 
