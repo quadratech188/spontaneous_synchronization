@@ -31,6 +31,8 @@ class Simulation:
         self.v = Data(np.zeros(n), 0)
         self.forces = np.zeros(n)
 
+        self.escapement_hooks = []
+
     def acceleration(self, x: Data, v: Data, f: np.ndarray) -> Data:
         dividend = self.m * self.r * sum(math.sin(x.x[i]) * v.x[i] ** 2 for i in range(self.n)) \
                 + self.m * g * sum(math.sin(x.x[i]) * math.cos(x.x[i]) for i in range(self.n)) \
@@ -88,8 +90,15 @@ class Simulation:
         for i in range(self.n):
             if self.x.x[i] < -self.angle_threshold and x_next.x[i] > -self.angle_threshold:
                 self.forces[i] += self.impulse / dt
+                for hook in self.escapement_hooks:
+                    hook(i, 1)
 
             if self.x.x[i] > self.angle_threshold and x_next.x[i] < self.angle_threshold:
                 self.forces[i] += -self.impulse / dt
+                for hook in self.escapement_hooks:
+                    hook(i, -1)
 
         self.x, self.v = x_next, v_next
+
+    def add_escapement_hook(self, hook):
+        self.escapement_hooks.append(hook)

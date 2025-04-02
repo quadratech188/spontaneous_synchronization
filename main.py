@@ -1,5 +1,6 @@
 from Simulation import Simulation
 from Visualizer import Visualizer
+import pygame
 from vpython import *
 import numpy as np
 import math
@@ -18,6 +19,11 @@ impulse = 0.1
 initial_impulse = 2
 timescale = 1
 
+pygame.init()
+pygame.mixer.init()
+
+click = pygame.mixer.Sound('click.wav')
+
 while True:
     scene.delete()
     scene = canvas()
@@ -31,6 +37,11 @@ while True:
             angle_threshold,
             impulse
             )
+
+    def play_click(index, dir):
+        click.play()
+
+    simulation.add_escapement_hook(play_click)
 
     visualizer = Visualizer(simulation)
 
