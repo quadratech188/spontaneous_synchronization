@@ -41,13 +41,15 @@ while True:
     def play_click(index, dir):
         click.play()
 
-    simulation.add_escapement_hook(play_click)
+    # simulation.add_escapement_hook(play_click)
 
     visualizer = Visualizer(simulation)
 
     angle_graph = graph(title='x - t', xtitle='t(s)', ytitle='x(rad)', xmin=-5, xmax=0, scroll=True)
 
     angle_curves = [gcurve(color=color.hsv_to_rgb(vector(i / n, 1, 1))) for i in range(n)]
+    for curve in angle_curves:
+        curve.plot(0, 0)
 
     scene.title = '<h1>Spontaneous Synchronization</h1>'
     timescale_text = wtext(text=f'Time Factor: {timescale}x\n')
@@ -137,6 +139,24 @@ while True:
 
     button(bind=restart, text='Restart')
 
+    maximums = [(0.0, 0.0) for _ in range(n)]
+    maximums_graph = graph(title='Maximum Amplitudes (x - t)', xtitle='t(s)', ytitle='x(rad)', xmin=-200, xmax=0, scroll=True)
+    maximums_curves = [gcurve(color=color.hsv_to_rgb(vector(i / n, 1, 1))) for i in range(n)]
+    for curve in maximums_curves:
+        curve.plot(0, 0)
+
+
+    def update_maximums(i, dir):
+        maximums_curves[i].plot(*maximums[i])
+        maximums[i] = (0.0, 0.0)
+
+    simulation.add_escapement_hook(update_maximums)
+
+    phase_graph = graph(title = 'Phase(theta - t)', xtitle='t(s)', ytitle='theta(rad)', xmin=-5, xmax=0, scroll=True)
+    phase_curves = [gcurve(color=color.hsv_to_rgb(vector(i / n, 1, 1))) for i in range(n)]
+    for curve in phase_curves:
+        curve.plot(0, 0)
+
     t = 0
     while not stop:
         rate(fps)
@@ -144,14 +164,21 @@ while True:
         for i in range(timescale):
             simulation.step(dt)
 
+            for i in range(simulation.n):
+                if (maximums[i][1] < abs(simulation.x.x[i])):
+                    maximums[i] = (t, abs(simulation.x.x[i]))
+
+            t += dt
+
         visualizer.update()
 
         for i in range(simulation.n):
             angle_curves[i].plot(t, simulation.x.x[i])
-
-        t += dt * timescale
+            phase_curves[i].plot(t, math.atan2(simulation.x.x[i], simulation.v.x[i]))
 
     angle_graph.delete()
+    maximums_graph.delete()
+    phase_graph.delete()
 
     scene.caption = ''
     scene.title = ''

@@ -34,6 +34,7 @@ class Simulation:
         self.escapement_hooks = []
 
     def acceleration(self, x: Data, v: Data, f: np.ndarray) -> Data:
+
         dividend = self.m * self.r * sum(math.sin(x.x[i]) * v.x[i] ** 2 for i in range(self.n)) \
                 + self.m * g * sum(math.sin(x.x[i]) * math.cos(x.x[i]) for i in range(self.n)) \
                 + self.b * self.m * self.r * sum(math.cos(x.x[i]) * v.x[i] for i in range(self.n)) \
