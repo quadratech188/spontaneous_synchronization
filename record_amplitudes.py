@@ -1,7 +1,6 @@
 from amplitudes import data
 import sys
 import csv
-import matplotlib.pyplot as plt
 import numpy as np
 
 writer = csv.writer(sys.stdout)
