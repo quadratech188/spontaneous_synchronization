@@ -35,18 +35,19 @@ class Simulation:
 
     def acceleration(self, x: Data, v: Data, f: np.ndarray) -> Data:
 
-        dividend = self.m * self.r * sum(math.sin(x.x[i]) * v.x[i] ** 2 for i in range(self.n)) \
-                + self.m * g * sum(math.sin(x.x[i]) * math.cos(x.x[i]) for i in range(self.n)) \
-                + self.b * self.m * self.r * sum(math.cos(x.x[i]) * v.x[i] for i in range(self.n)) \
-                - sum(f[i] * math.cos(x.x[i]) ** 2 for i in range(self.n))
+        dividend = self.m * self.r * np.sum(np.sin(x.x) * v.x ** 2) \
+                + self.m * g * np.sum(np.sin(x.x) * np.cos(x.x)) \
+                + self.b * self.m * self.r * np.sum(np.cos(x.x) * v.x) \
+                - np.sum(f * np.cos(x.x) ** 2)
 
-        divisor = (self.n * self.m + self.M) - self.m * sum(math.cos(x.x[i]) ** 2 for i in range(self.n))
+        divisor = (self.n * self.m + self.M) - self.m * np.sum(np.cos(x.x))
 
         A = dividend / divisor
 
-        a = np.fromiter((-g * math.sin(x.x[i]) \
-                         - math.cos(x.x[i]) * A / self.r - self.b * v.x[i] \
-                         + f[i] * math.cos(x.x[i]) / self.m / self.r for i in range(self.n)), float, self.n)
+        a = -g * np.sin(x.x) / self.r \
+            - np.cos(x.x) * A / self.r \
+            - self.b * v.x \
+            + f * np.cos(x.x) / self.m / self.r 
 
         return Data(a, A)
 
