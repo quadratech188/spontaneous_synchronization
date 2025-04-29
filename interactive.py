@@ -89,6 +89,7 @@ while True:
 
     scene.append_to_caption('<h2>Config</h2>')
 
+    # 일반적으로 할 수 있는 만족스러운 방법을 찾지 못해 결국 코드 중복을 받아들이기로 했다.
     def n_callback(evt):
         global n
         n = evt.number
@@ -161,10 +162,12 @@ while True:
     while not stop:
         rate(fps)
 
+        # timescale (배속 정도)에 따라 시뮬레이션을 더 많이 돌린다.
         for i in range(timescale):
             simulation.step(dt)
 
             for i in range(simulation.n):
+                # 최대 진폭 업데이트
                 if (maximums[i][1] < abs(simulation.x.x[i])):
                     maximums[i] = (t, abs(simulation.x.x[i]))
 
@@ -176,6 +179,7 @@ while True:
             angle_curves[i].plot(t, simulation.x.x[i])
             phase_curves[i].plot(t, math.atan2(simulation.x.x[i], simulation.v.x[i]))
 
+    # 모든 것 리셋. Restart 버튼 클릭 후 모두 지운 후, 새로 만드는 방법으로 config 업데이트를 반영한다.
     angle_graph.delete()
     maximums_graph.delete()
     phase_graph.delete()

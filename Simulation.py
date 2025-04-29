@@ -5,6 +5,11 @@ from vpython import vector
 g = 9.8
 
 class Data:
+    """
+    각 진자의 위치, 받침대의 위치 등을 모두 함께 저장하고, __add__, __rmul__ 등을 오버로딩함으로서 코드상으로 숫자 하나와 다를 것 없게 취급할 수 있다.
+    (state를 벡터로 취급하는 것과 같다고 볼 수 있다)
+    이는 뒤에 나오는 Runge-Kutta Integration의 구현을 간결하고 일반적이게 만들어 준다.
+    """
     def __init__(self, x: np.ndarray, X: float):
         self.x = x
         self.X = X
@@ -20,6 +25,15 @@ class Data:
 
 class Simulation:
     def __init__(self, n: int, m: float, M: float, r: float, b: float, angle_threshold: float, impulse: float):
+        """
+        n: 진자의 개수
+        m: 진자의 질량
+        M: 받침대의 질량
+        r: 진자의 길이
+        b: 각속도에 비례하는 댐핑
+        angle_threshold: 받침대가 진자에게 추가적인 충격량을 주는 각도 (메트로놈의 escapement 구현)
+        impulse: 충격량의 크기
+        """
         self.n = n
         self.m = m
         self.M = M
@@ -90,8 +104,10 @@ class Simulation:
         self.forces = np.zeros(self.n)
 
         for i in range(self.n):
+            # angle_threshold를 지났는지 확인
             if self.x.x[i] < -self.angle_threshold and x_next.x[i] > -self.angle_threshold:
                 self.forces[i] += self.impulse / dt
+                # 각 진자가 다시 escapement를 지날 때, 외부에서 함수가 호출되도록 만들 수 있는 hooking 기법을 사용한다. 예를 들어, 소리를 들리게 하거나 최대 진폭을 리셋하는 데 사용한다.
                 for hook in self.escapement_hooks:
                     hook(i, 1)
 

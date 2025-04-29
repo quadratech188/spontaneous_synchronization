@@ -4,6 +4,10 @@ import numpy as np
 import math
 
 class Visualizer:
+    """
+    Simulation 클래스를 vpython을 통해 시각화해주는 클래스.
+    각 프레임마다 update()함수를 호출해 simulation의 state에 일치하도록 시각화를 변경한다.
+    """
     def __init__(self, simulation: Simulation):
         self.simulation = simulation
 
