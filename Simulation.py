@@ -38,6 +38,7 @@ class Simulation:
         self.m = m
         self.M = M
         self.r = r
+        self.rs = r * np.ones(n)
         self.b = b
         self.angle_threshold = angle_threshold
         self.impulse = impulse
@@ -49,19 +50,19 @@ class Simulation:
 
     def acceleration(self, x: Data, v: Data, f: np.ndarray) -> Data:
 
-        dividend = self.m * self.r * np.sum(np.sin(x.x) * v.x ** 2) \
+        dividend = self.m * np.sum(self.rs * np.sin(x.x) * v.x ** 2) \
                 + self.m * g * np.sum(np.sin(x.x) * np.cos(x.x)) \
-                + self.b * self.m * self.r * np.sum(np.cos(x.x) * v.x) \
+                + self.b * self.m * np.sum(self.rs * np.cos(x.x) * v.x) \
                 - np.sum(f * np.cos(x.x) ** 2)
 
         divisor = (self.n * self.m + self.M) - self.m * np.sum(np.cos(x.x))
 
         A = dividend / divisor
 
-        a = -g * np.sin(x.x) / self.r \
-            - np.cos(x.x) * A / self.r \
+        a = -g * np.sin(x.x) / self.rs \
+            - np.cos(x.x) * A / self.rs \
             - self.b * v.x \
-            + f * np.cos(x.x) / self.m / self.r 
+            + f * np.cos(x.x) / self.m / self.rs
 
         return Data(a, A)
 
