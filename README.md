@@ -1,3 +1,5 @@
+일단 `git`, `python`이 깔려있어야 합니다.
+
 사용하는 방법:
 ```
 git clone https://github.com/quadratech188/spontaneous_synchronization.git
